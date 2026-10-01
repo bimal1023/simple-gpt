@@ -1,12 +1,14 @@
 # Step 3: The full (tiny) GPT
 #   multi-head attention + feed-forward MLP + residual connections + LayerNorm + dropout,
 #   stacked into N Transformer blocks.
+
+
 import time
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
 
-#  config 
+# ---------------- config (sized for an 8 GB Mac) ----------------
 batch_size = 32
 block_size = 64      # context length
 n_embd = 128         # vector size per token
@@ -21,7 +23,7 @@ device = 'mps' if torch.backends.mps.is_available() else 'cpu'
 torch.manual_seed(1337)
 print(f"Using device: {device}")
 
-#  data + tokenizer 
+# ---------------- data + tokenizer (same as before) ----------------
 with open('input.txt', 'r', encoding='utf-8') as f:
     text = f.read()
 chars = sorted(list(set(text)))
@@ -56,7 +58,8 @@ def estimate_loss():
     model.train()
     return out
 
-#  building blocks 
+# ---------------- building blocks ----------------
+class Head(nn.Module):
     """One head of masked self-attention (same as step 2, plus dropout)."""
     def __init__(self, head_size):
         super().__init__()
@@ -133,7 +136,7 @@ class Block(nn.Module):
         x = x + self.ffwd(self.ln2(x))   # think
         return x
 
-#  the GPT 
+# ---------------- the GPT ----------------
 class GPTLanguageModel(nn.Module):
     def __init__(self):
         super().__init__()
@@ -171,7 +174,7 @@ class GPTLanguageModel(nn.Module):
 model = GPTLanguageModel().to(device)
 print(f"Parameters: {sum(p.numel() for p in model.parameters()):,}")
 
-#  training 
+# ---------------- training ----------------
 optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
 start = time.time()
 for it in range(max_iters):
@@ -184,7 +187,7 @@ for it in range(max_iters):
     loss.backward()
     optimizer.step()
 
-# saving the trained weights so we can reuse them without retraining
+# save the trained weights so you can reuse them without retraining
 torch.save(model.state_dict(), 'gpt_step3.pt')
 print("Saved weights to gpt_step3.pt")
 
